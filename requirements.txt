@@ -1,0 +1,25 @@
+# LangGraph / LangChain
+langgraph
+langgraph-checkpoint-sqlite
+langchain-core
+langchain-openai
+langchain-community
+langchain-text-splitters
+
+# Vector store & document loaders
+faiss-cpu
+pypdf
+beautifulsoup4
+
+# Search & external APIs
+duckduckgo-search
+tavily-python
+
+# LLM SDK (for OpenAI error classes used in main.py / app.py)
+openai
+
+# UI
+streamlit
+
+# Config
+python-dotenv
