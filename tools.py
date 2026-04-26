@@ -174,5 +174,5 @@ def rag_tool(query: str) -> tuple[str, list[str]]:
 
 
 
-tools_list=[calculator,get_stock_price,rag_tool,purchase_stock]
+tools_list=[Search,calculator,get_stock_price,rag_tool,purchase_stock]
 
