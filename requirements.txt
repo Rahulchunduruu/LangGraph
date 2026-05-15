@@ -12,11 +12,14 @@ pypdf
 beautifulsoup4
 
 # Search & external APIs
-ddgs
+duckduckgo-search
 tavily-python
 
-# LLM SDK (for OpenAI error classes used in main.py / app.py)
+# LLM SDK
 openai
+
+# Stock data
+yfinance
 
 # UI
 streamlit

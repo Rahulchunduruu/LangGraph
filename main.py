@@ -9,7 +9,15 @@ from langchain_community.tools import DuckDuckGoSearchRun
 from openai import RateLimitError, AuthenticationError, APIConnectionError, APITimeoutError, APIError
 from config import Config
 from tools import tools_list
+
 import sqlite3
+import os
+import ast
+
+os.environ.setdefault('USER_AGENT', 'LangGraphChatbot/1.0')
+
+import warnings
+warnings.filterwarnings('ignore', message='.*allowed_objects.*')
 
 # Define the tool nodes
 tool_nodes=ToolNode(tools_list)
@@ -100,13 +108,13 @@ def route_after_grading(state: chatstate) -> str:
         return 'generate_response'
     try:
         scores_str = content.split('chunk_scores=', 1)[1]
-        scored = eval(scores_str, {"__builtins__": {}}, {})
+        scored = ast.literal_eval(scores_str)
         relevant_count = sum(1 for s in scored if float(s['score']) >= RELEVANCE_THRESHOLD)
         if relevant_count >= MIN_RELEVANT_CHUNKS:
             return 'generate_response'
     except Exception:
         return 'generate_response'
-    print('content:',content)
+    #print('content:',content)
     return 'web_fallback'
 
 def web_fallback(state: chatstate):
@@ -126,7 +134,8 @@ def route_after_tools(state: chatstate) -> str:
 def generate_response(state: chatstate):
     #llm = ChatOpenAI(temperature=0.7, openai_api_key=Config.OPENAI_API_KEY)
     prompt="""You are a helpful assistant. Use the tools when needed to answer the user's query and 
-           summarize the conversation history and provide a concise response.don't make up any information, if you don't know the answer say you don't know. Always use the tools when needed to get the correct answer."""
+           summarize the conversation history and provide a concise response.don't make up any information, if you don't know the answer say you don't know. 
+           Always use the tools when needed to get the correct answer."""
     llm = ChatOpenAI( base_url="https://api.x.ai/v1",api_key=Config.XAI_API_KEY,model="grok-4-1-fast-reasoning")
     llm_with_tools = llm.bind_tools(tools_list)
     response = llm_with_tools.invoke([SystemMessage(content=prompt)] + state['messages'])
@@ -136,8 +145,12 @@ def generate_response(state: chatstate):
 
 #help to save convestion history in memory, you can customize it to save to a database or file system as needed
 conn = sqlite3.connect(database='chatbot.db', check_same_thread=False)
-# Checkpointer
-checkpointer = SqliteSaver(conn=conn)
+try:
+    # Checkpointer
+    checkpointer = SqliteSaver(conn=conn)
+except Exception:
+    conn.close()
+    raise
 
 graph= StateGraph(chatstate)
 

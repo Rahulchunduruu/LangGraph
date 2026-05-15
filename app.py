@@ -22,8 +22,11 @@ if 'chat_history' not in st.session_state:
     st.session_state['chat_history'] = []
 
 for message in st.session_state['chat_history']:
-    with st.chat_message(message['role'], avatar=message['avatar']):
-        st.write(message['content'])
+    if message.get('type') == 'success':
+        st.success(message['content'])
+    else:
+        with st.chat_message(message['role'], avatar=message['avatar']):
+            st.write(message['content'])
 
 
 user_input = st.chat_input("Type your message here...", accept_file=True)
@@ -31,7 +34,7 @@ user_input = st.chat_input("Type your message here...", accept_file=True)
 if user_input:
     user_text = user_input.text
     user_files = user_input.files
-
+    #print(user_text)
     if user_files:
         uploaded_file = user_files[0]
         os.makedirs(DOCUMENTS_DIR, exist_ok=True)
@@ -40,16 +43,23 @@ if user_input:
             f.write(uploaded_file.read())
         try:
             add_to_vectorstore(file_path=saved_path, vectorstore_path=VECTORSTORE_PATH)
-            st.success(f"Saved '{uploaded_file.name}' to documents and indexed it.")
+            message = f"Saved '{uploaded_file.name}' to documents and indexed it."
+            st.success(message)
+            st.session_state['chat_history'].append(
+                {"role": "user", "content": message, "type": "success", "avatar": "https://picsum.photos/id/237/200/300"}
+            )
+            if user_text:
+                user_text = f"[Document '{uploaded_file.name}' was just uploaded and indexed. Use rag_tool to answer.]\n{user_text}"
         except Exception as e:
             st.error(f"Failed to process the uploaded file: {e}")
 
     if user_text:
+        display_text = user_input.text or user_text
         st.session_state['chat_history'].append(
-            {"role": "user", "content": user_text, "avatar": "https://picsum.photos/id/237/200/300"}
+            {"role": "user", "content": display_text, "type": "user", "avatar": "https://picsum.photos/id/237/200/300"}
         )
         with st.chat_message("user", avatar="https://picsum.photos/id/237/200/300"):
-            st.write(user_text)
+            st.write(display_text)
 
         with st.chat_message("assistant", avatar="https://picsum.photos/100"):
             def token_stream():

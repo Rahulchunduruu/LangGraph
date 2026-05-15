@@ -1,6 +1,5 @@
 from langchain_core.tools import tool
-from langgraph.types import interrupt
-from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_community.tools import DuckDuckGoSearchRun, HumanInputRun
 from tavily import TavilyClient
 from config import Config
 
@@ -10,6 +9,7 @@ from langchain_community.document_loaders import PyPDFLoader,TextLoader,WebBaseL
 from langchain_openai import OpenAIEmbeddings
 
 import os
+import yfinance as yf
 
 #loading documents based on file type, you can customize this function to support more file types or data sources as needed
 def loading_documents(file_path: str) -> list:
@@ -68,7 +68,8 @@ def retrieve_from_vectorstore(vectorstore_path: str, query: str) -> list:
 
 
 #TOOLS
-Search=DuckDuckGoSearchRun(safesearch="Moderate", max_results=12)
+Search=DuckDuckGoSearchRun(safesearch="Moderate", max_results=12,query="provide a concise answer to the question based on the search results, and include relevant sources links")
+
 
 
 @tool
@@ -98,27 +99,33 @@ def calculator(first_num: float, second_num: float, operation: str) -> dict:
 
 @tool
 def get_stock_price(stockname: str) -> dict:
-    """
-    Fetch the current stock price for a given ticker symbol using Tavily API.
-    """
+    """Fetch current stock price using yfinance."""
     try:
-        client = TavilyClient(api_key=Config.TAVILY_API_KEY)
-        response = client.search(query=stockname, max_results=10,days=5,include_answer=True)
-        return { "result": response["answer"][:10000]}  # Return the first 1000 characters of the answer
+        ticker = yf.Ticker(stockname.upper())
+        data = ticker.history(period="1d")
+        
+        if data.empty:
+            return {"error": f"No data found for {stockname}"}
+        
+        latest = data.iloc[-1]
+        return {
+            "ticker": stockname.upper(),
+            "price": float(latest['Close']),
+            "high": float(latest['High']),
+            "low": float(latest['Low']),
+            "volume": int(latest['Volume'])
+        }
     except Exception as e:
         return {"error": str(e)}
-    
+
 @tool
-def decision_maker(question: str) -> dict:
+def decision_maker(question: str) -> str:
     """
-    Simulate a decision-making process based on a question.
-    This is a placeholder function and should be implemented with actual logic to make decisions.
+    Make a simple yes/no decision based on the input text.
     """
-    # For demonstration, we will just return a fixed response based on the question
     if "no" in question.lower():
-        return {"decision": "no"}
-    else:
-        return {"decision": "yes"}
+        return "no"
+    return "yes"
 
 @tool
 def purchase_stock(symbol: str, quantity: int) -> dict:
@@ -130,9 +137,11 @@ def purchase_stock(symbol: str, quantity: int) -> dict:
     and wait for a human decision ("yes" / anything else).
     """
     # This pauses the graph and returns control to the caller
-    decision = interrupt(f"Approve buying {quantity} shares of {symbol}? (yes/no)")
+    HIL=HumanInputRun()
+    decision = HIL.run(f"Approve buying {quantity} shares of {symbol}? (yes/no)")
 
-    if isinstance(decision, str) and decision.lower() == "yes":
+
+    if decision_maker(decision) == "yes":
             return {
                 "status": "success",
                 "message": f"Purchase order placed for {quantity} shares of {symbol}.",
@@ -171,8 +180,4 @@ def rag_tool(query: str) -> tuple[str, list[str]]:
     return content, chunks
 
 
-
-
-
 tools_list=[Search,calculator,get_stock_price,rag_tool,purchase_stock]
-
