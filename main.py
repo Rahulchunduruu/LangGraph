@@ -47,7 +47,7 @@ def evaluator(state:chatstate):
     Answer:{1}
     """.format(state['question'],state['messages'])
     llm_eval=llm.with_structured_output(DocEvalScore)
-    evaluation = llm_eval.invoke([SystemMessage(content=prompt1)])
+    evaluation = llm_eval.invoke([SystemMessage(content=prompt)])
     return {"messages": [evaluation]}
 
 def extract_rag_chunks(state: chatstate) -> list[str]:
@@ -139,7 +139,7 @@ def generate_response(state: chatstate):
            Always use the tools when needed to get the correct answer."""
     llm = ChatOpenAI( base_url="https://api.x.ai/v1",api_key=Config.XAI_API_KEY,model="grok-4-1-fast-reasoning")
     llm_with_tools = llm.bind_tools(tools_list)
-    response = llm_with_tools.invoke([SystemMessage(content=prompt)] + state['messages'])
+    response = llm_with_tools.invoke([SystemMessage(content=prompt1)] + state['messages'])
     
     return {"messages": [response],'question':
                 state['messages'][-1].content}
