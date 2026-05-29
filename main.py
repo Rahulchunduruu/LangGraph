@@ -9,6 +9,7 @@ from langchain_community.tools import DuckDuckGoSearchRun
 from openai import RateLimitError, AuthenticationError, APIConnectionError, APITimeoutError, APIError
 from config import Config
 from tools import tools_list
+from prompt import prompt1
 
 import sqlite3
 import os
@@ -46,7 +47,7 @@ def evaluator(state:chatstate):
     Answer:{1}
     """.format(state['question'],state['messages'])
     llm_eval=llm.with_structured_output(DocEvalScore)
-    evaluation = llm_eval.invoke([SystemMessage(content=prompt)])
+    evaluation = llm_eval.invoke([SystemMessage(content=prompt1)])
     return {"messages": [evaluation]}
 
 def extract_rag_chunks(state: chatstate) -> list[str]:
